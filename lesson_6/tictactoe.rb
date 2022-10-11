@@ -12,13 +12,13 @@ def prompt(msg)
   puts "=> #{msg}"
 end
 
-def joinor (arr, delimeter=', ', logical_operator='or')
+def joinor(arr, delimeter=', ', logical_operator='or')
   return arr[0].to_s if arr.length == 1
   return arr[0].to_s + " #{logical_operator} " + arr[1].to_s if arr.length == 2
-  
-  arr[arr.size-1] = "#{logical_operator} " + arr[arr.size-1].to_s
-  output = arr.join("#{delimeter}")  
-end 
+
+  arr[arr.size - 1] = "#{logical_operator} " + arr[arr.size - 1].to_s
+  arr.join(delimeter.to_s)
+end
 
 # rubocop: disable Metrics/AbcSize:
 def display_board(brd, score)
@@ -70,23 +70,23 @@ def player_places_piece!(brd)
 end
 
 def computer_places_piece!(brd)
-  if !!detect_last_square_in_winning_line(brd, COMPUTER_MARKER) 
-    square = detect_last_square_in_winning_line(brd, COMPUTER_MARKER)
-  elsif !!detect_last_square_in_winning_line(brd, PLAYER_MARKER) 
-    square = detect_last_square_in_winning_line(brd, PLAYER_MARKER)
-  elsif brd[5] == INITIAL_MARKER
-    square = 5
-  else
-    square = empty_squares(brd).sample    
-  end
+  square = if detect_last_square_in_winning_line(brd, COMPUTER_MARKER)
+             detect_last_square_in_winning_line(brd, COMPUTER_MARKER)
+           elsif detect_last_square_in_winning_line(brd, PLAYER_MARKER)
+             detect_last_square_in_winning_line(brd, PLAYER_MARKER)
+           elsif brd[5] == INITIAL_MARKER
+             5
+           else
+             empty_squares(brd).sample
+           end
   brd[square] = COMPUTER_MARKER
 end
 
 def detect_last_square_in_winning_line(brd, marker)
-  WINNING_LINES.each do |line|    
-    line_values = brd.values_at(line[0], line[1], line[2])
+  WINNING_LINES.each do |line|
+    line_values = brd.values_at(*line)
     if line_values.count(marker) == 2 && line_values.count(INITIAL_MARKER) == 1
-      line_index = brd.values_at(line[0], line[1], line[2]).index(INITIAL_MARKER)
+      line_index = brd.values_at(*line).index(INITIAL_MARKER)
       square = line[line_index]
       return square
     end
@@ -95,7 +95,7 @@ def detect_last_square_in_winning_line(brd, marker)
 end
 
 def alternate_player(cur_plr)
-  return cur_plr == 'player' ? 'computer' : 'player'
+  cur_plr == 'player' ? 'computer' : 'player'
 end
 
 def board_full?(brd)
@@ -106,23 +106,23 @@ def someone_won?(brd)
   !!detect_winner(brd)
 end
 
-def detect_winner(brd)  
+def detect_winner(brd)
   WINNING_LINES.each do |line|
-    return 'Player' if brd.values_at(line[0], line[1], line[2]).all?(PLAYER_MARKER)
-    return 'Computer' if brd.values_at(line[0], line[1], line[2]).all?(COMPUTER_MARKER)
+    return 'Player' if brd.values_at(*line).all?(PLAYER_MARKER)
+    return 'Computer' if brd.values_at(*line).all?(COMPUTER_MARKER)
   end
   nil
 end
 
 # series_score methods
 def initialize_series_score
-  {player: 0, computer: 0, player_moves_first: true}
+  { player: 0, computer: 0, player_moves_first: true }
 end
 
 def update_series_score(brd, score)
   case detect_winner(brd)
   when 'Player' then score[:player] += 1
-  when 'Computer' then score[:computer] += 1  
+  when 'Computer' then score[:computer] += 1
   end
 end
 
@@ -138,14 +138,14 @@ end
 
 def series_score_msg(score)
   "The series score is: Player: #{score[:player]} Computer: #{score[:computer]}"
-end 
+end
 
 # series loop
 loop do
   series_score = initialize_series_score
-  puts  "Let's begin a new series! First to win #{WINS_TO_END_SERIES} games is the winner."
-  prompt  "Would you like to move first? (y or n)?"
-  prompt  "Type 'y' to play first; Type 'n' to let computer play first; Type'?' to let computer decide"
+  puts "Let's begin a new series! First to win #{WINS_TO_END_SERIES} games is the winner."
+  prompt "Would you like to move first? (y or n)?"
+  prompt "Type 'y' to play first; Type 'n' to let computer play first; Type'?' to let computer decide"
   first_answer = gets.chomp.downcase[0]
   # series_score[:player_moves_first] = false if first_answer == 'n'
 
@@ -155,38 +155,35 @@ loop do
     series_score[:player_moves_first] = [true, false].sample
   end
 
-  
   # game loop
-  loop do 
+  loop do
     board = initialize_board
 
     # set first player
-    current_player = (series_score[:player_moves_first] == true) ? 'player' : 'computer'
+    current_player = series_score[:player_moves_first] == true ? 'player' : 'computer'
     # player and computer moves loop (until game is won or booard is full)
     loop do
       display_board(board, series_score)
-      # binding.pry 
       current_player_places_piece!(board, current_player)
       current_player = alternate_player(current_player)
       break if someone_won?(board) || board_full?(board)
-      
     end
 
-    #end of game
+    # end of game
     display_board(board, series_score)
     if someone_won?(board)
       prompt "#{detect_winner(board)} is the winner"
       update_series_score(board, series_score)
 
       if someone_won_series?(series_score)
-        prompt ("#{detect_series_winner(series_score)} wins the series!")
-        prompt ("#{series_score_msg(series_score)}")
+        prompt "#{detect_series_winner(series_score)} wins the series!"
+        prompt series_score_msg(series_score).to_s
         break
-      end  
+      end
     else
       prompt "Tie game!"
     end
-    
+
     # continue series?
     prompt('Would you like to continue this series? (y or n)')
     play_again = gets.chomp.downcase
